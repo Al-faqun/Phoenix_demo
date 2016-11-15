@@ -1,0 +1,13 @@
+<Files ~ "\.ini$">
+  Require all denied
+</Files>
+
+<Files ~ "\.php$">
+   Order Deny,Allow
+	Deny from all
+</Files>
+
+<Files ~ "index|test|tpl_*|process.php$">
+   Order Deny,Allow
+	Allow from all
+</Files>

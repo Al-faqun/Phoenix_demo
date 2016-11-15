@@ -1,0 +1,50 @@
+﻿div.btn 
+{
+    margin: 20px 10px 10px 10px;
+}
+/* скрываем чекбоксы и блоки с содержанием */
+.hide 
+{
+    display: none;
+}
+.hide + label ~div 
+{
+    display: none;
+}
+/* оформляем текст label */
+.hide + label 
+{
+    border-bottom: 1px dotted green;
+    padding: 0;
+    color: green;
+    cursor: pointer;
+    display: inline-block;
+}
+/* вид текста label при активном переключателе */
+.hide:checked + label 
+{
+    color: #8A2BE2;
+    border-bottom: 0;
+}
+/* когда чекбокс активен, показываем блоки с содержанием  */
+.hide:checked + label + div 
+{
+    font-size: 14px;
+    display: block;
+    background: #efefef;
+    padding: 10px;
+}
+
+.right-top 
+{
+    font-size: 20px;
+    position: relative;
+    float: right;
+}
+
+.right-bottom 
+{
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+}

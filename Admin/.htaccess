@@ -1,0 +1,11 @@
+<Files ~ "\.ini$">
+  Require all denied
+</Files>
+
+<Files ~ "\.php$">
+   Require all denied
+</Files>
+
+<Files ~ "index|test|tpl_*|process.php$">
+   Require all granted
+</Files>
