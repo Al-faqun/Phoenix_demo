@@ -114,7 +114,11 @@
 			try {
 				$this->checkInput();
 				
-				$config = parse_ini_file($this->doc_root . '/Phoenix_demo/ini/config.ini');
+				$config_path = 
+				    (file_exists($this->doc_root . '/Phoenix_demo/ini/config_test.ini')) 
+					    ? $this->doc_root . '/Phoenix_demo/ini/config_test.ini'
+					    : $this->doc_root . '/Phoenix_demo/ini/config_mock.ini';
+				$config = parse_ini_file($config_path);
 				$this->loadModel($config);
 				$this->loadView('/Phoenix_demo/templates');
 				

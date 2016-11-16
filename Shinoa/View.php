@@ -9,7 +9,7 @@ namespace Shinoa;
 		/**
 		 * Path to document root (absolute)
 		 */
-		private $DOC_ROOT;
+		private $doc_root;
 		
 		/**
 		 * @var class Model 
@@ -48,7 +48,7 @@ namespace Shinoa;
 		public function setRoot($doc_root)
 		{
 			if (is_dir($doc_root)) {
-				$this->DOC_ROOT = $doc_root;
+				$this->doc_root = $doc_root;
 			} else {
 				throw new DatabaseException('Document root is not a valid directory!');
 			}
@@ -93,7 +93,7 @@ namespace Shinoa;
 				case 'main':
 					//задаём переменные, необходимые в главно шаблоне
 					//заголовок страницы 
-					$header = $this->DOC_ROOT . '/Phoenix_demo/Private/tpl_header.php'; 
+					$header = $this->doc_root . '/Phoenix_demo/Private/tpl_header.php'; 
 					if (!file_exists($header) || !is_file($header)) {
 						throw new ViewException('Cannot output: header file not found.');
 					}
@@ -102,6 +102,12 @@ namespace Shinoa;
 					$tpl_changes = $this->templateDir . '/tpl_changes.php';	
 					if (!file_exists($tpl_changes) || !is_file($tpl_changes)) {
 						throw new ViewException('Cannot output: changelog template not found.');
+					}
+					
+					//счётчик посещений
+					$tpl_counter = $this->doc_root . '/Phoenix_demo/Private/counter.php';
+					if (!file_exists($tpl_counter) || !is_file($tpl_counter)) {
+						throw new ViewException('Cannot output: counter template not found.');
 					}
 					
 					//сами цитаты

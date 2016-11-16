@@ -63,17 +63,8 @@
 			$num = dechex(mt_rand(hexdec('000000'), hexdec('ffffff')));
 			$color = 'color: #' . "$num"; 
 			break;
-		default:
-			$error = 'Incorrect number of quotes is processed! Not six.';
-			include DOC_ROOT . '/Phoenix_demo/templates/error.html.php';
-			exit(); ?>
+		default: ?>
 <?php endswitch; ?>
-
-<?php if (empty($citations[$i])): 	//если список цитат пуст
-			$error = 'Invalid quote list';
-			include DOC_ROOT . '/Phoenix_demo/templates/error.html.php';
-			exit();
-		endif; ?>
 	
 	<!-- постим цитату с нужными стилями -->
 	<div style="position: absolute; 

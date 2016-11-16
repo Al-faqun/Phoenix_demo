@@ -49,7 +49,7 @@
 		</div>
 
 		<div class="right-bottom">
-		    <?php include_once(DOC_ROOT . '/Phoenix_demo/Private/counter.php'); ?>
+		    <?php include $tpl_counter; ?>
 		</div>
 	</body>
 </html>
