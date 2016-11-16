@@ -12,17 +12,15 @@
 	//буферизация
 	ob_start();
 	
-	/* раздел объявления констант */
-	//этот скрипт ищет и задаёт файловый рут сайта (создаёт константу DOC_ROOT)
-	include_once('__php__.php');
+	/* раздел объявления */
 	//укорачиваем название классов из неймспейсов, они будут загружаться "сами"
-	use Shinoa\Exception\ModelException;
-	use Shinoa\Exception\ViewException;
-	use Shinoa\Exception\LoaderException;
 	use Shinoa\Model;
 	use Shinoa\View;
 	use Shinoa\ErrorHelper;
-
+	use Shinoa\Exception\ModelException;
+	use Shinoa\Exception\ViewException;
+	use Shinoa\Exception\LoaderException;
+	
 	Class Loader 
 	{
 		private $doc_root = '';
