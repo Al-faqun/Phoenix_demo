@@ -33,10 +33,10 @@ namespace Shinoa;
 		/**
 		 * Получает доступ к БД
 		 */
-		public function __construct($config, $doc_root) 
+		public function __construct($config) 
 		{
 			try {
-				$this->db = new Connection($config, $doc_root);
+				$this->db = new Connection($config);
 			} catch (DatabaseException $e) {
 				throw new ModelException('Cannot construct connection: ' . $e->getMessage());
 			}
@@ -114,23 +114,33 @@ namespace Shinoa;
 			
 				//инициализирует массив цитат  и их число 
 				$ids[0] = 0;
-				$count = $this->getnumOfQuotes();	 
+				$count = $this->getNumOfQuotes();	 
 				//для каждой из шести цитат
 				for ($i = 0; $i < $count; $i++)
 				{
-					do
-					{
-						$temp_id = $this->db->uniqueNum($min, $max, $ids);
-						$ids[$i] = $temp_id;
-						$result = $this->db->fetchQuote($ids[$i]);
-					}
-					while (mysqli_num_rows($result) === 0);
+					$id = $this->db->findUniqueNumOfQuote($ids);
+					$result = $this->db->fetchQuote($id);
 					$citations[] = mysqli_fetch_array($result)[0];
 				}
 				return $citations;
 			} catch	(DatabaseException $e) {
 				throw ModelException('Could not get quotes from DB: ' . $e->getMessage());
 			}
+		}
+		
+		public function insertQuote($quote_text) 
+		{
+			$quoteText = $this->mysqli->real_escape_string($quoteText);
+			if (!$this->db->insertQuote($quote_text)) {
+				$message = 'Couldn\'t add quote to db';
+				throw new ModelException($message);
+			}
+		}
+		
+		public function insertQuoteCategory($select)
+		{
+			$select = $mysqli->real_escape_string($select);
+			$this->db->insertQuoteCategory($select);
 		}
 	}
 	

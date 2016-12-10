@@ -1,5 +1,6 @@
 nbproject/
 ini/config_test.ini
+ini/config_mock.ini
 Private/
 README.txt
 *.sql

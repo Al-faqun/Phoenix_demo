@@ -1,7 +1,5 @@
 <!-- Шаблон 'отображения' страницы админки -->
 
-<?php include_once('__php__.php'); ?>
-<?php include_once(DOC_ROOT . '/Phoenix_demo/helpers.inc.php'); ?>
 <?php session_true_start(); ?>
 <!DOCTYPE html>
 <html>
@@ -18,7 +16,7 @@
 		<!-- если мы попали на страницу после того, 
 		      как пользователь ввёл верный пароль -->
 		<?php if(isset($_SESSION['verified']) AND($_SESSION['verified'] === 'true')): ?>
-			<form action="process.php" method="POST">
+			<form action="" method="POST">
 				<label for="fe-1">Отправить цитату в базу данных</label>
 				<textarea name="textarea" id="fe-1" rows="4" cols="70"></textarea></br>
 				<label for="fe-2">Выберите категорию, в которую хотите отправить цитату:</label>
@@ -34,14 +32,14 @@
 		
 		<!-- если пароль не введён  или введён не верно, просим ввести -->
 		<?php else: ?>
-			<form action="process.php" method="POST">
+			<form action="" method="POST">
 				<label for="pswd">Введите пароль:</label>
 				<input type="password" id="pswd" name="pswd"/>
 				<input type="Submit" value="Войти">
 			</form>
 		<?php endif;?>
 		</br>
-		<form action="process.php" method="POST">
+		<form action="" method="POST">
 			<input type="Submit" name="back" value="Вернуться на главную страницу"/>
 		</form>
 	</body>

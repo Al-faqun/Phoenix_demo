@@ -5,7 +5,7 @@ use Shinoa\Exception\DatabaseException;
 
 class Connection
 	{
-		private $DOC_ROOT = 'D:/USR/apache/htdocs/s2.localhost';
+		private $DOC_ROOT = '';
 		private $mysqli = null;
 		private $config = null;
 		
@@ -17,7 +17,7 @@ class Connection
 		public function __sleep() 
 		{
 			$this->close();
-			return array('DOC_ROOT', 'config');
+			return array('config');
 		} 
 		
 		/**
@@ -36,10 +36,9 @@ class Connection
 		 * @param string $doc_root Path to document root of webserver (absolute)
 		 * @throws DatabaseException Error creating Connection
 		 */
-		public function __construct($config, $doc_root) 
+		public function __construct($config) 
 		{
 			try {
-				$this->setRoot($doc_root);
 				$this->setConfig($config);
 				$this->connect();
 				$this->setCharset('utf8');
@@ -69,7 +68,7 @@ class Connection
 		 * 
 		 * @throws DatabaseException Failed to connect to MySQL
 		 */
-		public function connect()
+		private function connect()
 		{
 			mysqli_report(MYSQLI_REPORT_STRICT);
 			try {
@@ -88,25 +87,11 @@ class Connection
 		 * 
 		 * @throws DatabaseException Could not close connection properly
 		 */
-		public function close()
+		private function close()
 		{
 			if (!$this->mysqli->close()) {
 				$message = 'Couldn\'t close connection properly: ' . $this->mysqli->error;
 				throw new DatabaseException($message) ;
-			}
-		}
-		
-		/**
-		 * 
-		 * @param String $doc_root
-		 * @throws DatabaseException Not valid root
-		 */
-		public function setRoot($doc_root)
-		{
-			if (is_dir($doc_root)) {
-				$this->DOC_ROOT = $doc_root;
-			} else {
-				throw new DatabaseException('Document root is not a valid directory!');
 			}
 		}
 		
@@ -246,20 +231,23 @@ class Connection
 		 * 
 		 * @return int
 		 */
-		public function uniqueNum($min, $max, $ids)
+		public function uniqueNum($left, $right, $ids)
 		{
-			if ((!is_int($min)) || (!is_int($max))) {
+			if ((!is_int($left)) || (!is_int($right))) {
 				throw new DatabaseException('One or several of parameters are not int');
 			}
 			
-			if ($max < $min) {
-				throw new DatabaseException('Max number must be bigger than min number');
+			if ($right < $left) {
+				//swap'em
+				$temporaryLeft = $left;
+				$left = $right;
+				$right = $temporaryLeft;
 			}
 			
 			$temp_id = 0; 			
 			do {
 				//выбирает случайный номер цитаты
-				$temp_id = mt_rand($min, $max);
+				$temp_id = mt_rand($left, $right);
 			}
 			//проверяет список номеров цитат на дубликаты
 			while (array_search($temp_id, $ids) !== FALSE);
@@ -268,13 +256,39 @@ class Connection
 				throw new DatabaseException('Error getting unique integer');
 			} else return $temp_id;
 		}
+		
+		/**
+		 * @param array $ids Method tests it's result against this array,
+		 * so there are no matches.
+		 * 
+		 * @return integer number of quote in database
+		 * @throws DatabaseException Cannot find unique quote number
+		 */
+		public function findUniqueNumOfQuote($ids = array())
+		{
+			$min = 0; $max = 0; 
+			//получает диапазон номеров цитат из БД
+			$this->fetchInterval($min, $max);
 			
+			$i = 0;
+			do {
+				$i++;
+				if ($i > 1000) {
+					throw new DatabaseException('Cannot find unique quote number');
+				}
+				
+				$temp_id = $this->uniqueNum($min, $max, $ids);
+				$result = $this->fetchQuote($temp_id);
+			}
+			while ($result === false);
+			
+			return $temp_id;
+		}
+		
 		/**
 		 * Return mysql_result, containing quote with given $id
 		 * 
-		 * @param int $id ID of  quote
-		 * 
-		 * @throws DatabaseException No result 
+		 * @param int $id ID of quote
 		 * 
 		 * @return mixed Mysql_result or FALSE upon failure
 		 */
@@ -286,8 +300,95 @@ class Connection
 			
 			if (mysqli_num_rows($result) === 0)
 			{
-				throw new DatabaseException('No result after fetching quote');
+				$result = false;
 			}
 			return $result;
+		}
+		
+		/**
+		 * 
+		 * @return int return last inserted id 
+		 * (works only if there exists AUTOINCREMENT field
+		 * in last INSERT or UPDATE query!)
+		 */
+		public function lastInsertedId()
+		{
+			$result = (int)$this->mysqli->insert_id;
+			return $result;
+		}
+		
+		/**
+		 * 
+		 * @param type $quoteText Text of quote to be inserted 'as is' (already escaped)
+		 * @return boolean true is succeed, otherwise false
+		 */
+		public function insertQuote($quoteText)
+		{
+			$sql = "INSERT INTO `quotes` SET "
+			         . "`quote`='$quoteText'";
+			if (!$this->mysqli->query($sql)) {
+				$result = false;
+			} else $result = true;
+			
+			return $result;
+		}
+		
+		/**
+		 * 
+		 * @param string $select text-name of quote's category 
+		 * @param type $insertedQuoteId optional 
+		 * @return boolean or int Int on success, otherwise false
+		 */
+		public function insertLastQuoteToCategory($select, $insertedQuoteId = 0)
+		{
+			$quoteId = ($insertedQuoteId === 0) 
+			            ? $this->lastInsertedId() : $insertedQuoteId;
+			$sql = "SELECT `id` FROM `categories`
+			       WHERE `name`='$select' LIMIT 1";
+			if ($result = $this->mysqli->query($sql)) {
+				$categoryId = mysqli_fetch_row($result)[0];
+				mysqli_free_result($result);
+			} else { 
+				return false; 
+			}
+
+			$sql = "INSERT INTO `quote_category` SET
+			       `quote_id`=$quoteId,
+			       `category_id`=$categoryId";
+			if (!$this->mysqli->query($sql))
+			{
+				return false;
+			}
+			else return $quoteId;
+		}
+		
+		/**
+		 * 
+		 * @param int $quoteId ID of quote to be deleted
+		 * @throws DatabaseException Cannot delete selected quote
+		 */
+		public function deleteQuoteById($quoteId)
+		{
+			$sql = "DELETE FROM `quotes` WHERE `id`=$quoteId";
+			
+			if (!$result = $this->mysqli->query($sql)) {
+				$message = 'Cannot delete selected quote';
+				throw new DatabaseException($message);
+			}
+		}
+		
+		/**
+		 * 
+		 * @param int $quoteId ID of quote, which category record must be deleted
+		 * @throws DatabaseException
+		 */
+		public function deleteQuoteCategoryById($quoteId)
+		{
+			$sql = "DELETE FROM `quote_category` WHERE `quote_id`=$quoteId";
+			
+			if (!$result = $this->mysqli->query($sql)) {
+				$message = 'Cannot delete selected quote-category record';
+				throw new DatabaseException($message);
+			}
 		}
 	}

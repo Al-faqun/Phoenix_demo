@@ -28,48 +28,16 @@
 	}
 
     //после редиректа: обрабатываем данные из формы, добавляем цитату в базу данных
-	if (isset($_SESSION['textarea'])) 
+	if (isset($_SESSION['textarea']) &&(isset($_SESSION['select'])) ) 
 	{
-		$quote_text = $mysqli->real_escape_string($_SESSION['textarea']);
-		$sql = "INSERT INTO `quotes` SET
-		     `quote`='$quote_text'";
-		if (!$mysqli->query($sql))
-		{
-			$error = 'Error inserting quote: ' . $mysqli->error;
-			include DOC_ROOT . '/Phoenix_demo/templates/error.html.php';
-			exit();
-		}
+		$quoteText = $_SESSION['textarea'];
+		$model->insertQuote($quoteText);
         //добавляем в базу данных запись о том, какой категории принадлежит цитата
-		if (isset($_SESSION['select'])) 
-		{
-			$select = $mysqli->real_escape_string($_SESSION['select']);
-			$quote_id = $mysqli->insert_id;
-			$sql = "SELECT `id` FROM `categories`
-			       WHERE `name`='$select' LIMIT 1";
-			if ($result = $mysqli->query($sql))
-			{
-				$category_id= mysqli_fetch_row($result)[0];
-				mysqli_free_result($result);
-			}
-			else 
-			{
-				$error = 'Error selecting quote category id: ' . $mysqli->error;
-				include DOC_ROOT . '/Phoenix_demo/templates/error.html.php';
-				exit();
-			}
-
-			$sql = "INSERT INTO `quote_category` SET
-			       `quote_id`=$quote_id,
-			       `category_id`=$category_id";
-			if (!$mysqli->query($sql))
-			{
-				$error = 'Error inserting quote-category record: ' . $mysqli->error;
-				include DOC_ROOT . '/Phoenix_demo/templates/error.html.php';
-				exit();
-			}
-		}
-		$_SESSION['output'] = 'Успешно добавили цитату.';    //эта переменная отображается на страничке после редиректа (статус)
-		header('Location: ' . "/Phoenix_demo/Admin/",true,303);
+		$select = $_SESSION['select'];
+		$model->insertQuoteCategory($select); 
+		//эта переменная отображается на страничке после редиректа (статус)
+		$_SESSION['output'] = 'Успешно добавили цитату.';    
+		header('Location: ' . "/Phoenix_demo/Admin/", true, 303);
 		exit;
 	}
 

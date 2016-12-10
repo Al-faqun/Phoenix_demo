@@ -4,25 +4,8 @@ namespace Shinoa;
 	use Shinoa\Model;
 	use Shinoa\Exception\ModelException;
 	use Shinoa\Exception\ViewException;
-	class View	
+	class MainView extends AbstractView	
 	{
-		/**
-		 * Path to document root (absolute)
-		 */
-		private $doc_root;
-		
-		/**
-		 * @var class Model 
-		 */
-		private $model;
-		
-		/**
-		 *Path to templates' dir (absolute)
-		 * 
-		 * @var string 
-		 */
-		private $templateDir = '';
-		
 		/**
 		 * 
 		 * @param class_Model $model
@@ -31,56 +14,9 @@ namespace Shinoa;
 		 */
 		public function __construct(Model $model, $doc_root, $templateDir) 
 		{
-			try {
-				$this->setRoot($doc_root);
-				$this->setModel($model);
-				$this->setTemplateDir($templateDir);
-			} catch (ViewException $e) {
-				throw new ViewException('Cannot construct view: ' . $e->getMessage());
-			}
+			parent::__construct($model, $doc_root, $templateDir);
 		}
-		
-		/**
-		 * 
-		 * @param String $doc_root
-		 * @throws ViewException Not valid root
-		 */
-		public function setRoot($doc_root)
-		{
-			if (is_dir($doc_root)) {
-				$this->doc_root = $doc_root;
-			} else {
-				throw new DatabaseException('Document root is not a valid directory!');
-			}
-		}
-		
-		/**
-		 * 
-		 * @param String $doc_root
-		 * @throws ViewException Not valid root
-		 */
-		public function setModel($model)
-		{
-			if ($model instanceof Model) {
-				$this->model = $model;
-			}
-			else throw new ViewException('Not valid model passed!');
-		}
-		
-		/**
-		 * 
-		 * @param String $doc_root
-		 * @throws ViewException Not valid root
-		 */
-		public function setTemplateDir($templateDir)
-		{
-			if (is_dir($templateDir)) {
-				$this->templateDir = $templateDir;
-			} else {
-				throw new DatabaseException('Template dir is not a valid directory!');
-			}
-		}
-		
+
 		/**
 		 * Procedure places ready css code of place and color for a text quote
 		 * 
@@ -188,7 +124,7 @@ namespace Shinoa;
 						throw new ViewException('Cannot output: citations template not found.');
 					}
 					
-					//css для tpl_citations
+					//css для tpl_citations(да, я в курсе что frontend лучше через JS, но я ещё не знаю его :_:)
 					$quotesPosAndColor = self::quotesPosAndColor($count);
 					
 					//вызывает общий шаблон страницы
@@ -215,4 +151,5 @@ namespace Shinoa;
 			echo $contents;
 		}
 	}
+
 

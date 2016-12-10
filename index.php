@@ -15,8 +15,9 @@
 	/* раздел объявления */
 	//укорачиваем название классов из неймспейсов, они будут загружаться "сами"
 	use Shinoa\Model;
-	use Shinoa\View;
+	use Shinoa\MainView;
 	use Shinoa\ErrorHelper;
+	use Shinoa\Exception\FileException;
 	use Shinoa\Exception\ModelException;
 	use Shinoa\Exception\ViewException;
 	use Shinoa\Exception\LoaderException;
@@ -66,7 +67,7 @@
 		 */
 		private function loadModel($config)
 		{
-			$this->model = new Model($config, $this->doc_root);
+			$this->model = new Model($config);
 		}
 		
 		/**
@@ -85,7 +86,7 @@
 				throw new LoaderException('Templates path is not a valid dir');
 			}
 			
-			$this->view = new View($this->model, $this->doc_root, $templateDirAbs);
+			$this->view = new MainView($this->model, $this->doc_root, $templateDirAbs);
 		}
 		
 		private function checkInput()
@@ -118,6 +119,10 @@
 				    (file_exists($this->doc_root . '/Phoenix_demo/ini/config_test.ini')) 
 					    ? $this->doc_root . '/Phoenix_demo/ini/config_test.ini'
 					    : $this->doc_root . '/Phoenix_demo/ini/config_mock.ini';
+				if (!file_exists($config_path)) {
+					throw new LoaderException('Nonexistent config file');
+				}
+				
 				$config = parse_ini_file($config_path);
 				$this->loadModel($config);
 				$this->loadView('/Phoenix_demo/templates');
