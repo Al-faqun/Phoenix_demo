@@ -1,4 +1,9 @@
 <!-- отображает чейндж-лог -->
+<?php 
+	//проверка, все ли переменные заданы перед запуском шаблона
+	if (!isset($changes))
+		throw new Exception('No_var'); 
+?>
 
 <input type="checkbox" id="hd-1" class="hide"/>
     <label for="hd-1">Changelog</label>

@@ -12,20 +12,19 @@
 	//буферизация
 	ob_start();
 	
-	/* раздел объявления констант */
-	//этот скрипт ищет и задаёт файловый рут сайта (создаёт константу DOC_ROOT)
-	include_once('__php__.php');
+	/* раздел объявления */
 	//укорачиваем название классов из неймспейсов, они будут загружаться "сами"
-	use Shinoa\Exception\ModelException;
-	use Shinoa\Exception\ViewException;
-	use Shinoa\Exception\LoaderException;
-	use Shinoa\Model;
-	use Shinoa\View;
-	use Shinoa\ErrorHelper;
-
-	Class Loader 
+	use \Shinoa\QuoteManager;
+	use \Shinoa\MainView;
+	use \Shinoa\ErrorHelper;
+	use \Shinoa\Exception\ModelException;
+	use \Shinoa\Exception\ViewException;
+	use \Shinoa\Exception\LoaderException;
+	use \Shinoa\Exception\ExReporter;
+	
+	Class MainLoader 
 	{
-		private $doc_root = '';
+		private $docRoot = '';
 		private $model = null;
 		private $view = null;
 		
@@ -46,7 +45,7 @@
 			}
 			$fileName .= str_replace('_', DIRECTORY_SEPARATOR, $className) . '.php';
 		
-			require $this->doc_root . DIRECTORY_SEPARATOR . 'Phoenix_demo' . DIRECTORY_SEPARATOR . $fileName;
+			require $this->docRoot . DIRECTORY_SEPARATOR . 'Phoenix_demo' . DIRECTORY_SEPARATOR . $fileName;
 		}	
 		
 		/**
@@ -58,7 +57,7 @@
 		protected function setRoot($root) 
 		{
 			if (is_dir($root)) {
-				$this->doc_root = $root;
+				$this->docRoot = $root;
 			} else throw new LoaderException('Cannot set root: not valid directory');
 		}
 		
@@ -68,7 +67,8 @@
 		 */
 		private function loadModel($config)
 		{
-			$this->model = new Model($config, $this->doc_root);
+			$this->model = new QuoteManager($config);
+			$this->model->setChangeLogPath($this->docRoot . '/Phoenix_demo/changelog.txt');
 		}
 		
 		/**
@@ -78,16 +78,16 @@
 		 */
 		private function loadView($templateDirRel)
 		{
-			if (($this->model === null) || !($this->model instanceof Model)) {
+			if (($this->model === null) || !($this->model instanceof QuoteManager)) {
 				throw new LoaderException('Model is not set before loading view');
 			} 
 			
-			$templateDirAbs = $this->doc_root . $templateDirRel;
+			$templateDirAbs = $this->docRoot . $templateDirRel;
 			if (!is_dir($templateDirAbs)) {
 				throw new LoaderException('Templates path is not a valid dir');
 			}
 			
-			$this->view = new View($this->model, $this->doc_root, $templateDirAbs);
+			$this->view = new MainView($this->model, $this->docRoot, $templateDirAbs);
 		}
 		
 		private function checkInput()
@@ -97,7 +97,7 @@
 			//оттуда данные берёт Представление
 			//кнопка цвета цитат
 			if (isset($_GET['color'])) {
-				$color_on = ($_GET['color'] === '0') ? false : true;
+				$color_on = !($_GET['color'] === '0');
 				$this->model->setColor($color_on);
 			}
 	
@@ -114,35 +114,43 @@
 			$this->setRoot($root);
 			
 			try {
-				$this->checkInput();
+				$config_path = 
+				    (file_exists($this->docRoot . '/Phoenix_demo/ini/config_test.ini')) 
+					    ? $this->docRoot . '/Phoenix_demo/ini/config_test.ini'
+					    : $this->docRoot . '/Phoenix_demo/ini/config_mock.ini';
+				if (!file_exists($config_path)) {
+					throw new LoaderException('Nonexistent config file');
+				}
 				
-				$config = parse_ini_file($this->doc_root . '/Phoenix_demo/ini/config.ini');
+				$config = parse_ini_file($config_path);
 				$this->loadModel($config);
 				$this->loadView('/Phoenix_demo/templates');
 				
+				$this->checkInput();
 				//отсылаем страницу пользователю
-				$this->view->render('main');
+				$this->view->render();
+				
 			} catch (ModelException $e) {
-				$errorMes = 'Cannot create model: ' . $e->getMessage();
+				$errorMes = 'Cannot create model: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 		
 			} catch (ViewException $e) {
-				$errorMes = 'Cannot create view: ' . $e->getMessage();
+				$errorMes = 'Cannot create view: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 		
 			} catch (Exception $e) {
-				$errorMes = 'General exceptional situation: ' . $e->getMessage();
+				$errorMes = 'General exceptional situation: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 			}
 		}
 	}
 	
-	$loader = new Loader();
+	$loader = new MainLoader();
 	$loader->main();
 	ob_end_flush();
