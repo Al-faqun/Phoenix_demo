@@ -1,6 +1,5 @@
 <!-- Шаблон 'отображения' страницы админки -->
 
-<?php session_true_start(); ?>
 <!DOCTYPE html>
 <html>
 	<head>
@@ -15,7 +14,7 @@
 			
 		<!-- если мы попали на страницу после того, 
 		      как пользователь ввёл верный пароль -->
-		<?php if(isset($_SESSION['verified']) AND($_SESSION['verified'] === 'true')): ?>
+		<?php if(isset($_SESSION['verified']) && ($_SESSION['verified'] === 'true')): ?>
 			<form action="" method="POST">
 				<label for="fe-1">Отправить цитату в базу данных</label>
 				<textarea name="textarea" id="fe-1" rows="4" cols="70"></textarea></br>
@@ -44,7 +43,3 @@
 		</form>
 	</body>
 </html>
-<?php
-	//удаляем все данные, записанные в сессию
-	session_destroy();
-?>

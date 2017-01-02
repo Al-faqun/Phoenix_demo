@@ -1,8 +1,7 @@
 <?php
 namespace Shinoa;
 
-	use Shinoa\Model;
-	use Shinoa\Exception\ModelException;
+	use Shinoa\QuoteManager;
 	use Shinoa\Exception\ViewException;
 	abstract class AbstractView	
 	{
@@ -12,7 +11,7 @@ namespace Shinoa;
 		protected $doc_root;
 		
 		/**
-		 * @var class Model 
+		 * @var class QuoteManager 
 		 */
 		protected $model;
 		
@@ -24,12 +23,26 @@ namespace Shinoa;
 		protected $templateDir = '';
 		
 		/**
+		 * Checks is file exists and throwes Exception otherwise.
 		 * 
-		 * @param class_Model $model
+		 * @param string $absulutePath Path to file
+		 * @param type $errMes Message for Exception
+		 * @throws ViewException $errMes
+		 */
+		public static function check($absulutePath, $errMes)
+		{
+			if (!file_exists($absulutePath) || !is_file($absulutePath)) {
+				throw new ViewException($errMes);
+			}
+		}
+		
+		/**
+		 * 
+		 * @param class_QuoteManager $model
 		 * @param string $doc_root Path to document root (absolute) of web server
 		 * @param string $templateDir Path to templates' dir (absolute)
 		 */
-		public function __construct(Model $model, $doc_root, $templateDir) 
+		public function __construct(QuoteManager $model, $doc_root, $templateDir) 
 		{
 			try {
 				$this->setRoot($doc_root);
@@ -50,7 +63,7 @@ namespace Shinoa;
 			if (is_dir($doc_root)) {
 				$this->doc_root = $doc_root;
 			} else {
-				throw new DatabaseException('Document root is not a valid directory!');
+				throw new ViewException('Document root is not a valid directory!');
 			}
 		}
 		
@@ -61,7 +74,7 @@ namespace Shinoa;
 		 */
 		public function setModel($model)
 		{
-			if ($model instanceof Model) {
+			if ($model instanceof QuoteManager) {
 				$this->model = $model;
 			}
 			else throw new ViewException('Not valid model passed!');
@@ -77,7 +90,7 @@ namespace Shinoa;
 			if (is_dir($templateDir)) {
 				$this->templateDir = $templateDir;
 			} else {
-				throw new DatabaseException('Template dir is not a valid directory!');
+				throw new ViewException('Template dir is not a valid directory!');
 			}
 		}
 		
@@ -86,12 +99,12 @@ namespace Shinoa;
 		 * @param string $page
 		 * @return string Текст страницы
 		 */
-		abstract public function output($page);
+		abstract public function output();
 		
 		/**
 		 * Отсылает указанную страницу пользователю.
 		 * @param string $page
 		 */
-		abstract public function render($page);
+		abstract public function render();
 	}
 

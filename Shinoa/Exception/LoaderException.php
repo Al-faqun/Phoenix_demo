@@ -1,6 +1,6 @@
 <?php
 namespace Shinoa\Exception;
 
-class LoaderException 
+class LoaderException extends \Exception
 {
 }

@@ -13,13 +13,15 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 	protected $insertedQuoteIds = array();
 	protected $insertedQuoteCategory = array();
 	
-	public function setUp() {
+	public function setUp() 
+	{
 		$config_path = DOC_ROOT . '/Phoenix_demo/ini/config_mock.ini';
 		$config = parse_ini_file($config_path);
 		$this->db = new Connection($config);
 	}
 	
-	public function tearDown() {
+	public function tearDown() 
+	{
 		if (!empty($this->insertedQuoteIds)) foreach ($this->insertedQuoteIds as $quoteId) {
 			$this->db->deleteQuoteById($quoteId);
 		}
@@ -54,7 +56,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 		$this->db->setCharset('mock_charset');
 	}
 	
-	public function testSelectDbail()
+	public function testSelectDbFail()
 	{
 		$this->expectException(\Shinoa\Exception\DatabaseException::class);
 		$this->db->selectDb('mock_db');
@@ -87,13 +89,13 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 	
 	public function testFindUniqueNumOfQuote()
 	{
-		$int = $this->db->findUniqueNumOfQuote();
+		$int = $this->db->findUniqueIDOfQuote();
 		$this->assertInternalType('integer', $int);
 	}
 	
 	public function testFetchQuote()
 	{
-		$id = $this->db->findUniqueNumOfQuote();
+		$id = $this->db->findUniqueIDOfQuote();
 		$result = $this->db->fetchQuote($id);
 		$this->assertNotFalse($result);
 	}

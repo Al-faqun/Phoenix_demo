@@ -10,9 +10,9 @@ namespace Shinoa;
 class ErrorHelper {
 	private $templateDir = '';
 	public function __construct($templateDir) {
-		if (is_string($templateDir)) {
+		if (is_dir($templateDir)) {
 			$this->templateDir = $templateDir;
-		}
+		} else throw new Exception ("Error Helper faied to be created");
 	}
 	public function renderErrorPageAndExit($errorMes, $whereToRedirect) 
 	{

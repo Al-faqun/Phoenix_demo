@@ -1,18 +1,18 @@
 <?php
 namespace Shinoa;
 
-	use Shinoa\Model;
+	use Shinoa\QuoteManager;
 	use Shinoa\Exception\ModelException;
 	use Shinoa\Exception\ViewException;
 	class MainView extends AbstractView	
 	{
 		/**
 		 * 
-		 * @param class_Model $model
+		 * @param classQuoteManager $model
 		 * @param string $doc_root Path to document root (absolute) of web server
 		 * @param string $templateDir Path to templates' dir (absolute)
 		 */
-		public function __construct(Model $model, $doc_root, $templateDir) 
+		public function __construct(QuoteManager $model, $doc_root, $templateDir) 
 		{
 			parent::__construct($model, $doc_root, $templateDir);
 		}
@@ -20,8 +20,8 @@ namespace Shinoa;
 		/**
 		 * Procedure places ready css code of place and color for a text quote
 		 * 
-		 * @param Int $left_offset
-		 * @param Int $top_offset
+		 * @param Int $left_offset at page
+		 * @param Int $top_offset at page
 		 * @param String by reference $top_outcome
 		 * @param String by reference $left_outcome
 		 * @param String by reference $color_outcome
@@ -83,60 +83,51 @@ namespace Shinoa;
 		 * @param string $page
 		 * @return string Текст страницы
 		 */
-		public function output($page)
+		public function output()
 		{
 			
 			ob_start();
-			switch ($page) {
-				case 'main':
-					//задаём переменные, необходимые в главноv шаблоне
-					//необходимые данные из модели
-					try {
-						$color_on = $this->model->getColor();
-						$changes = $this->model->getChanges();
-						$citations = $this->model->getQuotes();
-						$count = $this->model->getNumOfQuotes();
-					} catch (ModelException $e) {
-						throw new ViewException('Cannot output: ' . $e->getMessage());
-					}
+			//задаём переменные, необходимые в главноv шаблоне
+			//необходимые данные из модели
+			try {
+				$color_on = $this->model->getColor();
+				$changes = $this->model->getChangeLog();
+				if ($changes === false) $changes = 'Changelog not found';
+				$citations = $this->model->getQuotes();
+				$count = $this->model->getNumOfQuotes();
+			} catch (ModelException $e) {
+				throw new ViewException('Cannot output: ' . $e->getMessage());
+			}
 					
-					//заголовок страницы 
-					$header = $this->doc_root . '/Phoenix_demo/Private/tpl_header.php'; 
-					if (!file_exists($header) || !is_file($header)) {
-						throw new ViewException('Cannot output: header file not found.');
-					}
+			//заголовок страницы 
+			$header = $this->doc_root . '/Phoenix_demo/Private/tpl_header.php';
+			$errMes = 'Cannot output: header file not found.';
+			self::check($header, $errMes);
 					
-					//чейнджлог
-					$tpl_changes = $this->templateDir . '/tpl_changes.php';	
-					if (!file_exists($tpl_changes) || !is_file($tpl_changes)) {
-						throw new ViewException('Cannot output: changelog template not found.');
-					}
+			//чейнджлог
+			$tpl_changes = $this->templateDir . '/tpl_changes.php';
+			$errMes = 'Cannot output: changelog template not found.';
+			self::check($tpl_changes, $errMes);
 					
-					//счётчик посещений
-					$tpl_counter = $this->doc_root . '/Phoenix_demo/Private/counter.php';
-					if (!file_exists($tpl_counter) || !is_file($tpl_counter)) {
-						throw new ViewException('Cannot output: counter template not found.');
-					}
+			//счётчик посещений
+			$tpl_counter = $this->doc_root . '/Phoenix_demo/Private/counter.php';
+			$errMes = 'Cannot output: counter template not found.';
+			self::check($tpl_counter, $errMes);
 					
-					//сами цитаты
-					$tpl_citations = $this->templateDir . '/tpl_citations.php';
-					if (!file_exists($tpl_citations) || !is_file($tpl_citations)) {
-						throw new ViewException('Cannot output: citations template not found.');
-					}
+			//сами цитаты
+			$tpl_citations = $this->templateDir . '/tpl_citations.php';
+			$errMes = 'Cannot output: citations template not found.';
+			self::check($tpl_citations, $errMes);
 					
-					//css для tpl_citations(да, я в курсе что frontend лучше через JS, но я ещё не знаю его :_:)
-					$quotesPosAndColor = self::quotesPosAndColor($count);
+			//css для tpl_citations(да, я в курсе что лучше через JS, но я пока за него не взялся :_:)
+			$quotesPosAndColor = self::quotesPosAndColor($count);
 					
-					//вызывает общий шаблон страницы
-					$outputFile = $this->templateDir . '/tpl_main.php';
-					if (file_exists($outputFile) && is_file($outputFile)) {
-						include $outputFile;
-					} else throw new ViewException('Cannot output file');
-					
-					break;
-				default:
-					break;
-			} 
+			//вызывает общий шаблон страницы
+			$outputFile = $this->templateDir . '/tpl_main.php';
+			$errMes = 'Cannot output file';
+			self::check($outputFile, $errMes);
+			include $outputFile;
+			
 			return ob_get_clean();			
 		}
 		
@@ -144,10 +135,10 @@ namespace Shinoa;
 		 * Отсылает указанную страницу пользователю.
 		 * @param string $page
 		 */
-		public function render($page) 
+		public function render() 
 		{
 			header('Content-type: text/html; charset=utf-8');
-			$contents = $this->output($page);
+			$contents = $this->output();
 			echo $contents;
 		}
 	}

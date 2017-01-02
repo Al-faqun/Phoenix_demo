@@ -2,19 +2,24 @@
 	/**
 	 * Эта "админ-панель" позволяет добавлять цитаты в БД.
 	 */
-	use Shinoa\Model;
-	use Shinoa\AdminView;
-	use Shinoa\ErrorHelper;
-	use Shinoa\Exception\ModelException;
-	use Shinoa\Exception\ViewException;
-	use Shinoa\Exception\LoaderException;
+
+	//буферизация
+	ob_start();
+	
+	use \Shinoa\QuoteManager;
+	use \Shinoa\AdminView;
+	use \Shinoa\ErrorHelper;
+	use \Shinoa\Helpers;
+	use \Shinoa\Exception\ModelException;
+	use \Shinoa\Exception\ViewException;
+	use \Shinoa\Exception\LoaderException;
+	use \Shinoa\Exception\ExReporter;
 	
 	Class AdminLoader 
 	{
-		private $doc_root = '';
+		private $docRoot = '';
 		private $model = null;
 		private $view = null;
-		
 		/**
 		 * Простейший пример функции автозагрузки класса.
 		 * 
@@ -32,7 +37,7 @@
 			}
 			$fileName .= str_replace('_', DIRECTORY_SEPARATOR, $className) . '.php';
 		
-			require $this->doc_root . DIRECTORY_SEPARATOR . 'Phoenix_demo' . DIRECTORY_SEPARATOR . $fileName;
+			require $this->docRoot . DIRECTORY_SEPARATOR . 'Phoenix_demo' . DIRECTORY_SEPARATOR . $fileName;
 		}	
 		
 		/**
@@ -44,7 +49,7 @@
 		protected function setRoot($root) 
 		{
 			if (is_dir($root)) {
-				$this->doc_root = $root;
+				$this->docRoot = $root;
 			} else throw new LoaderException('Cannot set root: not valid directory');
 		}
 		
@@ -54,7 +59,7 @@
 		 */
 		private function loadModel($config)
 		{
-			$this->model = new Model($config, $this->doc_root);
+			$this->model = new QuoteManager($config, $this->docRoot);
 		}
 		
 		/**
@@ -64,16 +69,16 @@
 		 */
 		private function loadView($templateDirRel)
 		{
-			if (($this->model === null) || !($this->model instanceof Model)) {
+			if (($this->model === null) || !($this->model instanceof QuoteManager)) {
 				throw new LoaderException('Model is not set before loading view');
 			} 
 			
-			$templateDirAbs = $this->doc_root . $templateDirRel;
+			$templateDirAbs = $this->docRoot . $templateDirRel;
 			if (!is_dir($templateDirAbs)) {
 				throw new LoaderException('Templates path is not a valid dir');
 			}
 			
-			$this->view = new AdminView($this->model, $this->doc_root, $templateDirAbs);
+			$this->view = new AdminView($this->model, $this->docRoot, $templateDirAbs);
 		}
 		
 		private function checkInput()
@@ -81,8 +86,7 @@
 			//если пользователь отправил форму с цитатой, записываем данные в сессию,
 			//чтобы не терять во время перехода между страницами
 			//пользовательский ввод проверяется уже при использовании сессионных переменных
-			session_true_start();
-			
+		
 			if (isset($_POST['textarea'])) 
 			{
 				$_SESSION['textarea'] = $_POST['textarea'];
@@ -97,13 +101,13 @@
 			}
 
 			//после редиректа: обрабатываем данные из формы, добавляем цитату в базу данных
-			if (isset($_SESSION['textarea']) &&(isset($_SESSION['select'])) ) 
+			if (isset($_SESSION['textarea']) && (isset($_SESSION['select'])) ) 
 			{
-				$quoteText = $_SESSION['textarea'];
-				$model->insertQuote($quoteText);
+				$quoteText = Connection::esc($_SESSION['textarea']);
+				$this->model->insertQuote($quoteText);
 			    //добавляем в базу данных запись о том, какой категории принадлежит цитата
-				$select = $_SESSION['select'];
-				$model->insertQuoteCategory($select);
+				$select =  Connection::esc($_SESSION['select']);
+				$this->model->insertQuoteCategory($select);
 				//эта переменная отображается на страничке после редиректа (статус)
 				$_SESSION['output'] = 'Успешно добавили цитату.';    
 				header('Location: ' . "/Phoenix_demo/Admin/", true, 303);
@@ -114,7 +118,7 @@
 			if (isset($_POST['pswd'])) 
 			{
 				$_SESSION['pswd'] = $_POST['pswd'];
-				include $this->doc_root . '/Phoenix_demo/Private/pswd_check.php';
+				include $this->docRoot . '/Phoenix_demo/Private/pswd_check.php';
 				//возвращаемся к главному скрипту админки
 				header('Location: ' . "/Phoenix_demo/Admin/", true, 303);    
 				exit;
@@ -130,75 +134,56 @@
 		
 		public function main()
 		{
-			include_once(DOC_ROOT . '/Phoenix_demo/helpers/helpers.inc.php');
 			spl_autoload_register(array($this, 'autoload'));
 			$root = 'D:\USR\apache\htdocs\s2.localhost';
 			$this->setRoot($root);
 			
-			//сессия нужна для сохранения состояния "лог-ина",
-			//а также позволяет передавать сообщения между страницами.
-			session_true_start();
-			//если введён пароль или текст цитаты для добавления
-			//этот код необходим  для реализации паттерна 'post - redirect - get'
-			if (isset($_SESSION['pswd']) OR isset($_SESSION['textarea'])) {
-				$this->view->render('admin');
-			}
-	
-			//если не сказано обратное, пользователь считается не-авторизированным
-			$_SESSION['verified'] = 'false';
-			//очищаем временную переменную, которая может хранить ненужное сообщение
-			unset($_SESSION['output']);
-			//загружаем страницу первый раз, все последующие запросы идут к process.php
-			include DOC_ROOT . '/Phoenix_demo/Admin/tpl_main.php';
 			try {
-				$this->checkInput();
-				
 				$config_path = 
-				    (file_exists($this->doc_root . '/Phoenix_demo/ini/config_test.ini')) 
-					    ? $this->doc_root . '/Phoenix_demo/ini/config_test.ini'
-					    : $this->doc_root . '/Phoenix_demo/ini/config_mock.ini';
+				    (file_exists($this->docRoot . '/Phoenix_demo/ini/config_test.ini')) 
+					    ? $this->docRoot . '/Phoenix_demo/ini/config_test.ini'
+					    : $this->docRoot . '/Phoenix_demo/ini/config_mock.ini';
+				if (!file_exists($config_path)) {
+					throw new LoaderException('Nonexistent config file');
+				}
+				
 				$config = parse_ini_file($config_path);
 				$this->loadModel($config);
-				$this->loadView('/Phoenix_demo/templates');
+				$this->loadView('/Phoenix_demo/Admin');
 				
+				$this->checkInput();
 				//отсылаем страницу пользователю
-				$this->view->render('main');
+				$this->view->render();
+				
 			} catch (ModelException $e) {
-				$errorMes = 'Cannot create model: ' . $e->getMessage();
+				$errorMes = 'Cannot create model: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 		
 			} catch (ViewException $e) {
-				$errorMes = 'Cannot create view: ' . $e->getMessage();
+				$errorMes = 'Cannot create view: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 		
 			} catch (Exception $e) {
-				$errorMes = 'General exceptional situation: ' . $e->getMessage();
+				$errorMes = 'General exceptional situation: ' . ExReporter::HTML($e);
 				$whereToRedirect = ' ';
-				$errorHelper = new ErrorHelper(DOC_ROOT . '/Phoenix_demo/templates');
+				$errorHelper = new ErrorHelper($this->docRoot . '/Phoenix_demo/templates');
 				$errorHelper->renderErrorPageAndExit($errorMes, $whereToRedirect);
 			}
+			
+			/*//если введён пароль или текст цитаты для добавления
+			//этот код необходим  для реализации паттерна 'post - redirect - get'
+			if (isset($_SESSION['pswd']) || isset($_SESSION['textarea'])) {
+				$this->view->render();
+			} */
+	
+			
 		}
 	}
-	
-	//сессия нужна для сохранения состояния "лог-ина",
-	//а также позволяет передавать сообщения между страницами.
-	session_true_start();
 
-    //если введён пароль или текст цитаты для добавления
-	//этот код необходим  для реализации паттерна 'post - redirect - get'
-	if (isset($_SESSION['pswd']) OR isset($_SESSION['textarea'])) {
-		include DOC_ROOT . '/Phoenix_demo/Admin/tpl_main.php';
-		exit();
-	}
-	
-	//если не сказано обратное, пользователь считается не-авторизированным
-	$_SESSION['verified'] = 'false';
-	//очищаем временную переменную, которая может хранить ненужное сообщение
-	unset($_SESSION['output']);
-	//загружаем страницу первый раз, все последующие запросы идут к process.php
-	include DOC_ROOT . '/Phoenix_demo/Admin/tpl_main.php';
-?>
+$loader = new AdminLoader();
+$loader->main();
+ob_end_flush();

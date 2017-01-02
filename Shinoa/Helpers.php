@@ -1,15 +1,13 @@
 <?php
-    include_once('__php__.php');
-    /**
-     * Вспомогательные классы и функции
-     */
-    
+namespace Shinoa;
+class Helpers 
+{
     /** 
      * Включает сессию, если она ещё не включена, тем самым избегаем лишних сообщений.
      * 
      * @return void
      */
-    function session_true_start() 
+    public static function sessionTrueStart() 
     {
         $status = session_status();
         if ($status == PHP_SESSION_NONE) {
@@ -18,13 +16,11 @@
         } else
             
         if ($status == PHP_SESSION_DISABLED) {
-            echo 'Sessions are not available! Exiting.';
-            exit();
+            throw new Exception('Sessions are not available! Exiting.');
 		} else
             
 		if ($status == PHP_SESSION_ACTIVE) {
 	    //ничего не делать, потому что отключение сессии удалит связанные с ней данные
 		}
     }
-	
-?>
+}	

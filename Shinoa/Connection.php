@@ -2,10 +2,15 @@
 namespace Shinoa;
 
 use Shinoa\Exception\DatabaseException;
+use Shinoa\Exception\DbConfException;
+use Shinoa\Exception\DbConnectException;
+use Shinoa\Exception\DbCloseException;
+use Shinoa\Exception\DbSelectException;
+use Shinoa\Exception\DbQueryException;
 
 class Connection
 	{
-		private $DOC_ROOT = '';
+		private $docRoot = '';
 		private $mysqli = null;
 		private $config = null;
 		
@@ -29,6 +34,32 @@ class Connection
 			$this->setCharset('utf8');
 			$this->selectDb($this->config['dbname']);
 		} 
+		
+		/**
+		 * 
+		 * @param mixed $var Variable to be escaped before insertion into DB.
+		 * @return mixed Escaped variable.
+		 */
+		public static function esc($var)
+		{
+			$result = mysqli_real_escape_string($var);
+			
+			return $result;
+		}
+		
+		/**
+		 * 
+		 * @param mixed $result Result from db query
+		 * 
+		 * @param integer $index Index of element in current row
+		 */
+		public static function nextRowByElem($result, $index)
+		{
+			$array = mysqli_fetch_array($result);
+			$element = (isset($array[$index])) ? $array[$index] : false;
+			
+			return $element;
+		}
 		
 		/**
 		 * 
@@ -76,7 +107,7 @@ class Connection
 			                                             $this->config['password']);
 			} catch (\mysqli_sql_exception $e) { 
 					$message = 'Failed to connect to MySQL.';
-					throw new DatabaseException($message);		 
+					throw new DbConnectException($message);		 
 			}
 			
 
@@ -91,7 +122,7 @@ class Connection
 		{
 			if (!$this->mysqli->close()) {
 				$message = 'Couldn\'t close connection properly: ' . $this->mysqli->error;
-				throw new DatabaseException($message) ;
+				throw new DbCloseException($message) ;
 			}
 		}
 		
@@ -105,9 +136,13 @@ class Connection
 		 */
 		public function setConfig($config) 
 		{
+			if (!is_array($config)) {
+				$message = 'Config is no array! Please, specify config before connecting to db';
+				throw new DbConfException($message);
+			}
 			if (empty($config)) {
-				$message = 'No config! Please, specify config before connecting to db';
-				throw new DatabaseException($message);
+				$message = 'Config is empty! Please, specify config before connecting to db';
+				throw new DbConfException($message);
 			}
 			if  ((!key_exists('username', $config)) 
 					||
@@ -116,7 +151,7 @@ class Connection
 			     (!key_exists('dbname', $config))
 				) {
 					$message = 'Incorrectly filled config!';
-					throw new DatabaseException($message);
+					throw new DbConfException($message);
 				}	
 			$this->config = $config;
 		}
@@ -148,7 +183,7 @@ class Connection
 			if (!$this->mysqli->select_db($dbName)) 
 			{
 				$message = 'Unable to locate selected database.';
-				throw new DatabaseException($message);
+				throw new DbSelectException($message);
 			}
 		}
 		
@@ -169,7 +204,7 @@ class Connection
 			if (!$result)
 			{
 				$message = $errMes;
-				throw new DatabaseException($message);
+				throw new DbQueryException($message);
 			}
 			
 			return $result;
@@ -192,7 +227,7 @@ class Connection
 			if (!$result)
 			{
 				$message = $errMes;
-				throw new DatabaseException($message);
+				throw new DbQueryException($message);
 			}
 			else return mysqli_fetch_row($result);
 		}
@@ -214,7 +249,7 @@ class Connection
 				$max = (int)$row[1];
 			}
 			else 
-				throw new DatabaseException('Cannot get correct interval of quotes');
+				throw new DbQueryException('Cannot get correct interval of quotes');
 		}
 		
 		/**
@@ -264,7 +299,7 @@ class Connection
 		 * @return integer number of quote in database
 		 * @throws DatabaseException Cannot find unique quote number
 		 */
-		public function findUniqueNumOfQuote($ids = array())
+		public function findUniqueIDOfQuote($ids = array())
 		{
 			$min = 0; $max = 0; 
 			//получает диапазон номеров цитат из БД
@@ -274,15 +309,17 @@ class Connection
 			do {
 				$i++;
 				if ($i > 1000) {
-					throw new DatabaseException('Cannot find unique quote number');
+					$return = false;
+					break;
 				}
 				
 				$temp_id = $this->uniqueNum($min, $max, $ids);
 				$result = $this->fetchQuote($temp_id);
 			}
 			while ($result === false);
+			$return = $temp_id;
 			
-			return $temp_id;
+			return $return;
 		}
 		
 		/**
@@ -300,9 +337,11 @@ class Connection
 			
 			if (mysqli_num_rows($result) === 0)
 			{
-				$result = false;
-			}
-			return $result;
+				$return = false;
+			} 
+			else $return = self::nextRowByElem($result, 0);
+			
+			return $return;
 		}
 		
 		/**
@@ -313,7 +352,11 @@ class Connection
 		 */
 		public function lastInsertedId()
 		{
-			$result = (int)$this->mysqli->insert_id;
+			$id = (int)$this->mysqli->insert_id;
+			if (empty($id) || !is_int($id)) {
+				$result = false;
+			} else $result = $id;
+			
 			return $result;
 		}
 		
@@ -337,29 +380,38 @@ class Connection
 		 * 
 		 * @param string $select text-name of quote's category 
 		 * @param type $insertedQuoteId optional 
-		 * @return boolean or int Int on success, otherwise false
+		 * @return boolean|int Int on success, otherwise false
 		 */
 		public function insertLastQuoteToCategory($select, $insertedQuoteId = 0)
 		{
+			$return = null;
+			
 			$quoteId = ($insertedQuoteId === 0) 
 			            ? $this->lastInsertedId() : $insertedQuoteId;
-			$sql = "SELECT `id` FROM `categories`
+			if ($quoteId !== false) {
+				$sql = "SELECT `id` FROM `categories`
 			       WHERE `name`='$select' LIMIT 1";
-			if ($result = $this->mysqli->query($sql)) {
-				$categoryId = mysqli_fetch_row($result)[0];
-				mysqli_free_result($result);
-			} else { 
-				return false; 
+				$result = $this->mysqli->query($sql);
+				
+				if ($result !== false) {
+					$categoryId = mysqli_fetch_row($result)[0];
+					mysqli_free_result($result);
+				} else { 
+					$return = false; 
+				}
+			} else $return = false;
+			
+			if ($return !== false) {
+				$sql = "INSERT INTO `quote_category` SET
+				       `quote_id`=$quoteId,
+				       `category_id`=$categoryId";
+				if (!$this->mysqli->query($sql))
+				{
+					$return = false;
+				} else $return = $quoteId;
 			}
-
-			$sql = "INSERT INTO `quote_category` SET
-			       `quote_id`=$quoteId,
-			       `category_id`=$categoryId";
-			if (!$this->mysqli->query($sql))
-			{
-				return false;
-			}
-			else return $quoteId;
+			
+			return $return;
 		}
 		
 		/**
@@ -372,8 +424,7 @@ class Connection
 			$sql = "DELETE FROM `quotes` WHERE `id`=$quoteId";
 			
 			if (!$result = $this->mysqli->query($sql)) {
-				$message = 'Cannot delete selected quote';
-				throw new DatabaseException($message);
+				return false;
 			}
 		}
 		
@@ -387,8 +438,7 @@ class Connection
 			$sql = "DELETE FROM `quote_category` WHERE `quote_id`=$quoteId";
 			
 			if (!$result = $this->mysqli->query($sql)) {
-				$message = 'Cannot delete selected quote-category record';
-				throw new DatabaseException($message);
+				return false;
 			}
 		}
 	}
