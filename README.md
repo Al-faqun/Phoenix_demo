@@ -1,5 +1,6 @@
 # Phoenix_demo
-Проходите дальше. Не на что смотреть.
+Мой первый сайт.
+Проходите дальше.
 
 Mysql-driven php site, for educational purposes. 
 Pulls from DB six random quotes of a particular forum user, then places them at pseudo-random coordinates on the page. 
